@@ -29,27 +29,38 @@ def draw_pipe(pipes):
         else:
             flip_pipe = pygame.transform.flip(pipe_surface,False,True)
             screen.blit(flip_pipe,pipe)   
-#xử lí va chạm
-def check_collision(pipes,lasers,sa):
+
+#xử lí va chạm + âm thanh
+last_hit_sound_time = 0
+hit_sound_delay = 500  # ms
+
+def check_collision(pipes, lasers, hp):
+    global last_hit_sound_time
+    current_time = pygame.time.get_ticks()
+    hit_this_frame = False
+
     for pipe in pipes:
         if bird_rect.colliderect(pipe):
-            sa-=1
-            if sa==0:
-                hitsound.play()
-                return 0
-    for alaser in lasers:
-        if bird_rect.colliderect(alaser):
-            sa-=1
-            if sa==0:
-                hitsound.play()
-                return 0
-    if bird_rect.top<=-78:
+            hp -= 1
+            hit_this_frame = True
+
+    for laser in lasers:
+        if bird_rect.colliderect(laser):
+            hp -= 1
+            hit_this_frame = True
+
+    # Va chạm với trần hoặc sàn => chết luôn
+    if bird_rect.top <= -78 or bird_rect.bottom >= 650:
         diesound.play()
         return 0
-    if bird_rect.bottom>=650:
-        diesound.play()
-        return 0
-    return sa 
+
+    # Chỉ phát âm thanh nếu va chạm và đã qua 300ms từ lần cuối
+    if hit_this_frame and current_time - last_hit_sound_time >= hit_sound_delay:
+        hitsound.play()
+        last_hit_sound_time = current_time
+
+    return hp
+
 #chim bay
 def rotate_bird(birds):
     new_bird=pygame.transform.rotozoom(birds,-bird_movement*4,1)
@@ -59,14 +70,46 @@ def bird_animation():
     new_bird=bird_list[index]
     new_bird_rect=new_bird.get_rect(center=(100,bird_rect.centery))
     return new_bird, new_bird_rect
+
+def draw_hp_bar(hp, max_hp=100):
+    # Vị trí và kích thước thanh máu
+    bar_x = 60
+    bar_y = 20
+    bar_width = 60
+    bar_height = 20
+
+    # Phần trăm máu còn lại
+    hp_percent = max(hp / max_hp, 0)
+
+    # Khung thanh máu (trắng)
+    pygame.draw.rect(screen, (255, 255, 255), (bar_x-2, bar_y-2, bar_width+4, bar_height+4))
+    # Thanh máu nền (xám)
+    pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height))
+    # Thanh máu còn lại (đỏ)
+    pygame.draw.rect(screen, (255, 0, 0), (bar_x, bar_y, int(bar_width*hp_percent), bar_height))
+
+    # Chữ "HP" bên trái
+    hp_label = small_font.render("HP", True, (255, 255, 255))
+    hp_label_rect = hp_label.get_rect(midright=(bar_x-10, bar_y+bar_height//2))
+    screen.blit(hp_label, hp_label_rect)
+
+    # Số HP bên phải
+    hp_text = small_font.render(str(hp), True, (255,255,255))
+    hp_rect = hp_text.get_rect(midleft=(bar_x+bar_width+10, bar_y+bar_height//2))
+    screen.blit(hp_text, hp_rect)
+
 #display
 def score_display(active): 
-    logo_suface=logo_font.render(logo_list[idx_logo],True,(255,250,100))
-    logo_rect=logo_suface.get_rect(center=(logo_x_pos,logo_y_pos))
-    screen.blit(logo_suface,logo_rect)
+
+    # HP hiển thị góc trái trên
+    draw_hp_bar(hp);
+
+
     score_surface=game_font.render('SCORE: '+str(int(score)),True,(0,204,0))
     score_rect=score_surface.get_rect(center=(215,100))
     screen.blit(score_surface,score_rect)
+
+
     if active==False:
         best_surface=game_font.render('BEST: '+str(int(best)),True,(255,0,0))
         best_rect=best_surface.get_rect(center=(215,150))
@@ -110,7 +153,7 @@ def draw_meteo(meteos):
 #tạo laser
 def create_laser():
     x=random.randint(2000,2500)
-    y=random.randint(150,350)
+    y=random.randint(100,400)
     alaser = laser.get_rect(midtop = (x,y)) 
     return alaser
 #dịch laser
@@ -159,8 +202,9 @@ bird_movement = 0
 
 game_active =True
 game_font=pygame.font.Font('04B_19.TTF',43)
+small_font = pygame.font.Font('04B_19.TTF', 20)
+
 new_font=pygame.font.SysFont('',25)
-logo_font=pygame.font.SysFont('',30)
 #chèn background
 bg = pygame.image.load('background-night.png').convert()
 bg = pygame.transform.scale2x(bg)
@@ -204,6 +248,7 @@ diesound=pygame.mixer.Sound('sfx_die.wav')
 hitsound=pygame.mixer.Sound('sfx_hit.wav')
 pointsound=pygame.mixer.Sound('sfx_point.wav')
 swooshingsound=pygame.mixer.Sound('sfx_swooshing.wav')
+healingsound = pygame.mixer.Sound('health-pickup-6860.mp3')
 
 #thiên thạch
 meteorite=pygame.image.load('meteo34x34.png').convert_alpha()
@@ -226,7 +271,7 @@ laser_animation_index = 0
 laser_list=[]
 #timer
 lasertime= pygame.USEREVENT+4
-pygame.time.set_timer(lasertime,4000)
+pygame.time.set_timer(lasertime,4000) # 4s /laser
 #điểm
 score =0
 best = 0
@@ -236,17 +281,19 @@ new_high_score=False
 
 #tăng tốc bay
 game_speed = 80
-speed_point = [5,10,15,20,25,30]
+speed_point = [5,10,15,20,25,30,50,100,200,300,400,500,600,700,800,900,1000]
 index_speed = 0
 end_index_speed = len(speed_point)-1
 
+speed_up_text = None
+speed_up_rect = None
+speed_up_active = False
+speed_up_speed = 4  # tốc độ chạy ngang
+
+
 #khoảng cách ống
-dis_pipes=[690,710,720,740]
-logo_list=['Great','Nice','Keep going']
-idx_logo=0
-logo_x_pos=-100
-logo_y_pos=20
-increase_x_logo=2
+dis_pipes=[690,710,730]
+
 #Màn hình chờ
 key = True
 while key:
@@ -261,7 +308,38 @@ while key:
     screen.blit(game_over_surface,(70,200))
     pygame.display.update()
 
-still_alive=3
+#healing system
+hp=100
+heart_img = pygame.image.load('heart_pixel_art_16x16.png').convert_alpha()
+heart_img = pygame.transform.scale2x(heart_img)
+heart_list = []
+
+def create_heart():
+    x = random.randint(500, 600)
+    y = random.randint(100, 400)
+    return heart_img.get_rect(center=(x, y))
+
+def move_heart(hearts):
+    for heart in hearts:
+        heart.centerx -= 3
+    # Xóa item đã bay khỏi màn hình
+    hearts = [h for h in hearts if h.centerx > -50]
+    return hearts
+
+def draw_heart(hearts):
+    for heart in hearts:
+        screen.blit(heart_img, heart)
+
+def check_heart_collision(hearts, hp, max_hp=100):
+    for heart in hearts[:]:  # copy để xóa khi ăn
+        if bird_rect.colliderect(heart):
+            hp = min(max_hp, hp + 10)  # hồi 10 HP, không quá max
+            healingsound.play()
+            hearts.remove(heart)
+    return hp
+newheart = pygame.USEREVENT + 5
+pygame.time.set_timer(newheart, random.randint(15000, 20000)) # 15-20s
+
 #main
 while True:
     for event in pygame.event.get():
@@ -275,8 +353,6 @@ while True:
                     bird_movement = -4.3
                     flapsound.play()
                 else:
-                    #logo_x_pos=-100
-                    #logo_y_pos=20
                     game_active=True
                     pipe_list.clear()
                     meteo_list.clear()
@@ -287,7 +363,7 @@ while True:
                     index_speed=0
                     game_speed=80
                     new_high_score=False
-                    still_alive=3
+                    hp=100
         if event.type == newpipe:
             pipe_list.extend(create_pipe())
         if event.type == birdflap:
@@ -297,6 +373,23 @@ while True:
             meteo_list.append(create_meteo())
         if event.type== lasertime:
             laser_list.append(create_laser())
+            if score > 30:
+                laser_list.append(create_laser())
+            if score > 50:
+                laser_list.append(create_laser())
+            if score > 100:
+                laser_list.append(create_laser())
+            if score > 200:
+                laser_list.append(create_laser())
+            if score > 300:
+                laser_list.append(create_laser())   
+            if score > 500:
+                laser_list.append(create_laser())
+
+        if event.type == newheart:
+            heart_list.append(create_heart())
+            pygame.time.set_timer(newheart, random.randint(8000, 15000))
+
 
 
 
@@ -312,7 +405,7 @@ while True:
         new_bird= rotate_bird(bird)
         bird_rect.centery += bird_movement
         screen.blit(new_bird,bird_rect)
-        still_alive=check_collision(pipe_list,laser_list,still_alive)
+        hp=check_collision(pipe_list,laser_list,hp)
 
         #ống
         pipe_list=move_pipe(pipe_list)
@@ -323,6 +416,20 @@ while True:
         laser_list=move_laser(laser_list)
         draw_laser(laser_list)
 
+        #healing item
+        heart_list = move_heart(heart_list)
+        draw_heart(heart_list)
+        hp = check_heart_collision(heart_list, hp)
+
+        if speed_up_active:
+            speed_up_rect.centerx += speed_up_speed
+            screen.blit(speed_up_text, speed_up_rect)
+
+            # Nếu chạy ra khỏi màn hình bên phải thì tắt
+            if speed_up_rect.left > WIDTH:
+                speed_up_active = False
+
+
         #score
         x=cal(score)
         if x>score:
@@ -331,7 +438,7 @@ while True:
         if best<score:
             new_high_score=True
         best=max(best,score)
-        game_active= (still_alive!=0)
+        game_active= (hp>0)
         score_display(game_active)
 
     score_display(game_active)
@@ -341,14 +448,6 @@ while True:
     draw_floor()
     if(floor_x_pos<=-432):
         floor_x_pos=0
-    logo_x_pos+=increase_x_logo
-    if(logo_x_pos>=700 or logo_x_pos <=-450):
-        increase_x_logo*=-1
-        idx_logo=(idx_logo+1)%len(logo_list)
-        #logo_x_pos=-100
-        logo_y_pos+=15
-        if logo_y_pos>70:
-            logo_y_pos=20
 
         
     pygame.display.update()
@@ -358,5 +457,10 @@ while True:
             swooshingsound.play()
             index_speed+=1
             game_speed+=5
+
+             # Tạo Speed Up text chạy ngang
+            speed_up_text = small_font.render("SPEED UP!", True, (255, 255, 0))
+            speed_up_rect = speed_up_text.get_rect(center=(-100, random.randint(50,200)))  # Bắt đầu ngoài màn hình bên trái
+            speed_up_active = True
     
 
