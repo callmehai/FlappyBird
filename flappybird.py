@@ -1,5 +1,11 @@
 import pygame, sys, random
 
+# Interval gốc của các timer
+PIPE_INTERVAL = 1500        # 1.5s sinh ống
+METEO_INTERVAL = 1000       # 1s sinh thiên thạch
+LASER_INTERVAL = 4000       # 4s sinh laser
+HEART_INTERVAL = 15000      # 15s sinh tim (có thể random lại khi dùng)
+
 #lặp sàn
 def draw_floor():
     screen.blit(floor,(floor_x_pos,650))
@@ -164,6 +170,7 @@ def move_laser(lasers):
     for lasera in lasers:
        lasera.centerx-=6
     return lasers
+    
 #vẽ laser
 def draw_laser(lasers):
     global laser_animation_index
@@ -232,7 +239,7 @@ pipe_surface= pygame.transform.scale2x(pipe_surface)
 pipe_list=[]
 #timer of pipe
 newpipe= pygame.USEREVENT
-pygame.time.set_timer(newpipe,1500)
+pygame.time.set_timer(newpipe,PIPE_INTERVAL)
 
 #Ending
 game_over_surface=pygame.transform.scale2x(pygame.image.load('message.png').convert_alpha())
@@ -257,7 +264,7 @@ meteo_list=[]
 
 #timer
 newmeteo= pygame.USEREVENT+3
-pygame.time.set_timer(newmeteo,1000)
+pygame.time.set_timer(newmeteo,METEO_INTERVAL)
 
 #LASER - Sử dụng file laser.png
 WARNING_DISTANCE = 50  # Khoảng cách từ mép phải màn hình để hiện "!"
@@ -271,7 +278,7 @@ laser_animation_index = 0
 laser_list=[]
 #timer
 lasertime= pygame.USEREVENT+4
-pygame.time.set_timer(lasertime,4000) # 4s /laser
+pygame.time.set_timer(lasertime,LASER_INTERVAL) # 4s /laser
 #điểm
 score =0
 best = 0
@@ -333,12 +340,13 @@ def draw_heart(hearts):
 def check_heart_collision(hearts, hp, max_hp=100):
     for heart in hearts[:]:  # copy để xóa khi ăn
         if bird_rect.colliderect(heart):
-            hp = min(max_hp, hp + 10)  # hồi 10 HP, không quá max
+            hp = min(max_hp, hp + random.randint(10,15))  # hồi random 10-15 HP, không quá max
             healingsound.play()
             hearts.remove(heart)
     return hp
 newheart = pygame.USEREVENT + 5
-pygame.time.set_timer(newheart, random.randint(15000, 20000)) # 15-20s
+pygame.time.set_timer(newheart, HEART_INTERVAL) # 15s
+paused = False
 
 #main
 while True:
@@ -347,7 +355,24 @@ while True:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN:
-            if event.key== pygame.K_SPACE:
+
+            # just pause to test
+            # if event.key == pygame.K_ESCAPE and game_active:
+            #     paused = not paused
+            #     if paused:
+            #         # Tắt timer khi pause
+            #         pygame.time.set_timer(newpipe, 0)
+            #         pygame.time.set_timer(newmeteo, 0)
+            #         pygame.time.set_timer(lasertime, 0)
+            #         pygame.time.set_timer(newheart, 0)
+            #     else:
+            #         # Bật lại timer khi unpause
+            #         pygame.time.set_timer(newpipe, PIPE_INTERVAL)
+            #         pygame.time.set_timer(newmeteo, METEO_INTERVAL)
+            #         pygame.time.set_timer(lasertime, LASER_INTERVAL)
+            #         pygame.time.set_timer(newheart, HEART_INTERVAL)
+
+            if event.key== pygame.K_SPACE and not paused:
                 if game_active:
                     bird_movement = 0
                     bird_movement = -4.3
@@ -366,7 +391,7 @@ while True:
                     hp=100
         if event.type == newpipe:
             pipe_list.extend(create_pipe())
-        if event.type == birdflap:
+        if event.type == birdflap and not paused:
             index=(index+1)%len(bird_list)
             bird, bird_rect=bird_animation()
         if event.type== newmeteo:
@@ -388,7 +413,7 @@ while True:
 
         if event.type == newheart:
             heart_list.append(create_heart())
-            pygame.time.set_timer(newheart, random.randint(8000, 15000))
+            pygame.time.set_timer(newheart, random.randint(HEART_INTERVAL, HEART_INTERVAL+5000))
 
 
 
@@ -397,32 +422,39 @@ while True:
     screen.blit(bg,(0,0))
     if game_active:
         #meteo
-        meteo_list=move_meteo(meteo_list)
+        if not paused:               # chỉ di chuyển khi không pause
+            meteo_list=move_meteo(meteo_list)
         draw_meteo(meteo_list) 
 
         #chim
-        bird_movement+=gravity
+        if not paused:               # chỉ di chuyển khi không pause
+            bird_movement += gravity
+            bird_rect.centery += bird_movement
         new_bird= rotate_bird(bird)
-        bird_rect.centery += bird_movement
         screen.blit(new_bird,bird_rect)
-        hp=check_collision(pipe_list,laser_list,hp)
+        if not paused:               # chỉ check khi không pause
+            hp=check_collision(pipe_list,laser_list,hp)
 
         #ống
-        pipe_list=move_pipe(pipe_list)
+        if not paused:               # chỉ di chuyển khi không pause
+            pipe_list=move_pipe(pipe_list)
         draw_pipe(pipe_list)
         #game_active=True // no die
 
         #laser
-        laser_list=move_laser(laser_list)
+        if not paused:               # chỉ di chuyển khi không pause     
+            laser_list=move_laser(laser_list)
         draw_laser(laser_list)
 
         #healing item
-        heart_list = move_heart(heart_list)
+        if not paused:               # chỉ di chuyển khi không pause     
+            heart_list = move_heart(heart_list)
         draw_heart(heart_list)
         hp = check_heart_collision(heart_list, hp)
 
-        if speed_up_active:
-            speed_up_rect.centerx += speed_up_speed
+        if speed_up_active:              
+            if not paused:           # chỉ di chuyển khi không pause
+                speed_up_rect.centerx += speed_up_speed
             screen.blit(speed_up_text, speed_up_rect)
 
             # Nếu chạy ra khỏi màn hình bên phải thì tắt
@@ -443,11 +475,12 @@ while True:
 
     score_display(game_active)
 
-    #sàn
-    floor_x_pos-=1
+    # Vẽ sàn luôn (kể cả pause) nhưng chỉ dịch khi không pause
+    if not paused:
+        floor_x_pos -= 1
     draw_floor()
-    if(floor_x_pos<=-432):
-        floor_x_pos=0
+    if floor_x_pos <= -432:
+        floor_x_pos = 0
 
         
     pygame.display.update()
