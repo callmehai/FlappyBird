@@ -153,7 +153,7 @@ def draw_meteo(meteos):
 #tạo laser
 def create_laser():
     x=random.randint(2000,2500)
-    y=random.randint(100,400)
+    y=random.randint(50,450)
     alaser = laser.get_rect(midtop = (x,y)) 
     return alaser
 #dịch laser
@@ -456,7 +456,10 @@ while True:
         if speed_point[index_speed]==int(score):
             swooshingsound.play()
             index_speed+=1
-            game_speed+=5
+            if score < 100:
+                game_speed+=5
+            else:
+                game_speed+=3
 
              # Tạo Speed Up text chạy ngang
             speed_up_text = small_font.render("SPEED UP!", True, (255, 255, 0))
