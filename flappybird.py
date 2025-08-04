@@ -208,23 +208,23 @@ gravity = 0.2
 bird_movement = 0
 
 game_active =True
-game_font=pygame.font.Font('04B_19.TTF',43)
-small_font = pygame.font.Font('04B_19.TTF', 20)
+game_font=pygame.font.Font('asset/font/04B_19.TTF',43)
+small_font = pygame.font.Font('asset/font/04B_19.TTF', 20)
 
 new_font=pygame.font.SysFont('',25)
 #chèn background
-bg = pygame.image.load('background-night.png').convert()
+bg = pygame.image.load('asset/img/background-night.png').convert()
 bg = pygame.transform.scale2x(bg)
 
 #chèn sàn
-floor = pygame.image.load('floor.png').convert()
+floor = pygame.image.load('asset/img/floor.png').convert()
 floor = pygame.transform.scale2x(floor)
 floor_x_pos=0
 
 #tạo chim
-bird_down = pygame.transform.scale2x(pygame.image.load('yellowbird-downflap.png').convert_alpha())
-bird_mid = pygame.transform.scale2x(pygame.image.load('yellowbird-midflap.png').convert_alpha())
-bird_up = pygame.transform.scale2x(pygame.image.load('yellowbird-upflap.png').convert_alpha())
+bird_down = pygame.transform.scale2x(pygame.image.load('asset/img/yellowbird-downflap.png').convert_alpha())
+bird_mid = pygame.transform.scale2x(pygame.image.load('asset/img/yellowbird-midflap.png').convert_alpha())
+bird_up = pygame.transform.scale2x(pygame.image.load('asset/img/yellowbird-upflap.png').convert_alpha())
 bird_list=[bird_down,bird_mid,bird_up]
 index=2
 bird = bird_list[index]
@@ -234,7 +234,7 @@ birdflap = pygame.USEREVENT +1
 pygame.time.set_timer(birdflap,200)
 
 #tạo ống
-pipe_surface= pygame.image.load('pipe-green.png').convert()
+pipe_surface= pygame.image.load('asset/img/pipe-green.png').convert()
 pipe_surface= pygame.transform.scale2x(pipe_surface)
 pipe_list=[]
 #timer of pipe
@@ -242,7 +242,7 @@ newpipe= pygame.USEREVENT
 pygame.time.set_timer(newpipe,PIPE_INTERVAL)
 
 #Ending
-game_over_surface=pygame.transform.scale2x(pygame.image.load('message.png').convert_alpha())
+game_over_surface=pygame.transform.scale2x(pygame.image.load('asset/img/message.png').convert_alpha())
 game_over_rect=game_over_surface.get_rect(center = (100,350))
 
 pipe_height=[]
@@ -250,15 +250,15 @@ for i in range(300,450):
     pipe_height.append(i)
 
 #sound
-flapsound=pygame.mixer.Sound('sfx_wing.wav')
-diesound=pygame.mixer.Sound('sfx_die.wav')
-hitsound=pygame.mixer.Sound('sfx_hit.wav')
-pointsound=pygame.mixer.Sound('sfx_point.wav')
-swooshingsound=pygame.mixer.Sound('sfx_swooshing.wav')
-healingsound = pygame.mixer.Sound('health-pickup-6860.mp3')
+flapsound=pygame.mixer.Sound('asset/sound/sfx_wing.wav')
+diesound=pygame.mixer.Sound('asset/sound/sfx_die.wav')
+hitsound=pygame.mixer.Sound('asset/sound/sfx_hit.wav')
+pointsound=pygame.mixer.Sound('asset/sound/sfx_point.wav')
+swooshingsound=pygame.mixer.Sound('asset/sound/sfx_swooshing.wav')
+healingsound = pygame.mixer.Sound('asset/sound/health-pickup-6860.mp3')
 
 #thiên thạch
-meteorite=pygame.image.load('meteo34x34.png').convert_alpha()
+meteorite=pygame.image.load('asset/img/meteo34x34.png').convert_alpha()
 meteorite=pygame.transform.scale2x(meteorite)
 meteo_list=[]
 
@@ -266,12 +266,12 @@ meteo_list=[]
 newmeteo= pygame.USEREVENT+3
 pygame.time.set_timer(newmeteo,METEO_INTERVAL)
 
-#LASER - Sử dụng file laser.png
+#LASER
 WARNING_DISTANCE = 50  # Khoảng cách từ mép phải màn hình để hiện "!"
 warning_font = pygame.font.SysFont(None, 50)  # font mặc định, cỡ 50
 warning_color = (255, 0, 0)  # đỏ chói
 
-laser = pygame.image.load('laser.png').convert_alpha()
+laser = pygame.image.load('asset/img/laser.png').convert_alpha()
 laser_animation_frames = None
 laser_animation_index = 0
 
@@ -317,7 +317,7 @@ while key:
 
 #healing system
 hp=100
-heart_img = pygame.image.load('heart_pixel_art_16x16.png').convert_alpha()
+heart_img = pygame.image.load('asset/img/heart_pixel_art_16x16.png').convert_alpha()
 heart_img = pygame.transform.scale2x(heart_img)
 heart_list = []
 
@@ -346,7 +346,6 @@ def check_heart_collision(hearts, hp, max_hp=100):
     return hp
 newheart = pygame.USEREVENT + 5
 pygame.time.set_timer(newheart, HEART_INTERVAL) # 15s
-paused = False
 
 #main
 while True:
@@ -356,23 +355,11 @@ while True:
             sys.exit()
         if event.type == pygame.KEYDOWN:
 
-            # just pause to test
-            # if event.key == pygame.K_ESCAPE and game_active:
-            #     paused = not paused
-            #     if paused:
-            #         # Tắt timer khi pause
-            #         pygame.time.set_timer(newpipe, 0)
-            #         pygame.time.set_timer(newmeteo, 0)
-            #         pygame.time.set_timer(lasertime, 0)
-            #         pygame.time.set_timer(newheart, 0)
-            #     else:
-            #         # Bật lại timer khi unpause
-            #         pygame.time.set_timer(newpipe, PIPE_INTERVAL)
-            #         pygame.time.set_timer(newmeteo, METEO_INTERVAL)
-            #         pygame.time.set_timer(lasertime, LASER_INTERVAL)
-            #         pygame.time.set_timer(newheart, HEART_INTERVAL)
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
 
-            if event.key== pygame.K_SPACE and not paused:
+            if event.key== pygame.K_SPACE:
                 if game_active:
                     bird_movement = 0
                     bird_movement = -4.3
@@ -391,7 +378,7 @@ while True:
                     hp=100
         if event.type == newpipe:
             pipe_list.extend(create_pipe())
-        if event.type == birdflap and not paused:
+        if event.type == birdflap:
             index=(index+1)%len(bird_list)
             bird, bird_rect=bird_animation()
         if event.type== newmeteo:
@@ -422,39 +409,35 @@ while True:
     screen.blit(bg,(0,0))
     if game_active:
         #meteo
-        if not paused:               # chỉ di chuyển khi không pause
-            meteo_list=move_meteo(meteo_list)
+        meteo_list=move_meteo(meteo_list)
         draw_meteo(meteo_list) 
 
         #chim
-        if not paused:               # chỉ di chuyển khi không pause
-            bird_movement += gravity
-            bird_rect.centery += bird_movement
+        bird_movement += gravity
+        bird_rect.centery += bird_movement
         new_bird= rotate_bird(bird)
         screen.blit(new_bird,bird_rect)
-        if not paused:               # chỉ check khi không pause
-            hp=check_collision(pipe_list,laser_list,hp)
+
+        #hp
+        hp=check_collision(pipe_list,laser_list,hp)
 
         #ống
-        if not paused:               # chỉ di chuyển khi không pause
-            pipe_list=move_pipe(pipe_list)
+        pipe_list=move_pipe(pipe_list)
         draw_pipe(pipe_list)
+
         #game_active=True // no die
 
         #laser
-        if not paused:               # chỉ di chuyển khi không pause     
-            laser_list=move_laser(laser_list)
+        laser_list=move_laser(laser_list)
         draw_laser(laser_list)
 
         #healing item
-        if not paused:               # chỉ di chuyển khi không pause     
-            heart_list = move_heart(heart_list)
+        heart_list = move_heart(heart_list)
         draw_heart(heart_list)
         hp = check_heart_collision(heart_list, hp)
 
         if speed_up_active:              
-            if not paused:           # chỉ di chuyển khi không pause
-                speed_up_rect.centerx += speed_up_speed
+            speed_up_rect.centerx += speed_up_speed
             screen.blit(speed_up_text, speed_up_rect)
 
             # Nếu chạy ra khỏi màn hình bên phải thì tắt
@@ -475,9 +458,8 @@ while True:
 
     score_display(game_active)
 
-    # Vẽ sàn luôn (kể cả pause) nhưng chỉ dịch khi không pause
-    if not paused:
-        floor_x_pos -= 1
+    # Vẽ sàn
+    floor_x_pos -= 1
     draw_floor()
     if floor_x_pos <= -432:
         floor_x_pos = 0

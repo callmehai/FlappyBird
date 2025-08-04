@@ -5,7 +5,7 @@ a = Analysis(
     ['flappybird.py'],
     pathex=[],
     binaries=[],
-    datas=[('background-night.png', '.'), ('floor.png', '.'), ('yellowbird-downflap.png', '.'), ('yellowbird-midflap.png', '.'), ('yellowbird-upflap.png', '.'), ('pipe-green.png', '.'), ('message.png', '.'), ('meteo34x34.png', '.'), ('laser.png', '.'), ('04B_19.TTF', '.'), ('sfx_wing.wav', '.'), ('sfx_hit.wav', '.'), ('sfx_point.wav', '.'), ('sfx_die.wav', '.'), ('sfx_swooshing.wav', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,10 +35,4 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-)
-app = BUNDLE(
-    exe,
-    name='flappybird.app',
-    icon=None,
-    bundle_identifier=None,
 )
