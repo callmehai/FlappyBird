@@ -1,4 +1,4 @@
-# 🐤 Flappy Bird Python Game
+# 🐤 Yet Another Flappy Bird
 
 Một phiên bản **Flappy Bird** được viết bằng **Python + Pygame**, dành cho Windows.  
 Bạn chỉ cần tải về, giải nén và chạy file `.exe` để chơi game!
@@ -7,6 +7,7 @@ Bạn chỉ cần tải về, giải nén và chạy file `.exe` để chơi gam
 
 
 🎮 Điều khiển
+
 Space / Up → Chim bay lên
 
 ESC → Thoát game
@@ -14,4 +15,5 @@ ESC → Thoát game
 ---
 
 📜 License
+
 Dự án cá nhân học tập.
