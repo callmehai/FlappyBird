@@ -8,7 +8,7 @@ Bạn chỉ cần tải về, giải nén và chạy file `.exe` để chơi gam
 
 🎮 Điều khiển
 
-Space / Up → Chim bay lên
+Space → Chim bay lên
 
 ESC → Thoát game
 
@@ -16,4 +16,4 @@ ESC → Thoát game
 
 📜 License
 
-Dự án cá nhân học tập.
+Dự án cá nhân học tập. Free to use.
