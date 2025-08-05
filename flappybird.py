@@ -2,11 +2,12 @@ from this import d
 from numpy import append
 import pygame, sys, random
 
-# Ngắt đoạn sự kiện create
+# Ngắt đoạn sự kiện
 PIPE_INTERVAL = 1500        # 1.5s sinh ống
 METEO_INTERVAL = 1000       # 1s sinh thiên thạch
 LASER_INTERVAL = 4000       # 4s sinh laser
 HEART_INTERVAL = 15000      # 15s sinh tim 
+STAR_INTERVAL = 12000       # 12s sinh sao
 
 # =============================== DEF ===============================
 
@@ -66,7 +67,7 @@ def check_collision(pipes, lasers, hp):
         hitsound.play()
         last_hit_sound_time = current_time
 
-    return hp
+    return max(hp,0)
 
 #chim bay
 def rotate_bird(birds):
@@ -220,6 +221,31 @@ def check_heart_collision(hearts, hp, max_hp=100):
             hearts.remove(heart)
     return hp
    
+#tạo sao
+def create_star():
+    x = random.randint(500, 600)
+    y = random.randint(100, 400)
+    return star_img.get_rect(center=(x, y))
+#dịch sao
+def move_star(stars):
+    for star in stars:
+        star.centerx -= 3
+    # Xóa item đã bay khỏi màn hình
+    stars = [h for h in stars if h.centerx > -50]
+    return stars
+#vẽ sao
+def draw_star(stars):
+    for star in stars:
+        screen.blit(star_img, star)
+#check ăn sao
+def check_star_collision(stars, score):
+    for star in stars[:]:  # copy để xóa khi ăn
+        if bird_rect.colliderect(star):
+            score += 2
+            starsound.play()
+            stars.remove(star)
+    return score
+   
 
 # =============================== INIT ===============================
 pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=512)
@@ -295,9 +321,10 @@ hitsound=pygame.mixer.Sound('asset/sound/sfx_hit.wav')
 pointsound=pygame.mixer.Sound('asset/sound/sfx_point.wav')
 swooshingsound=pygame.mixer.Sound('asset/sound/sfx_swooshing.wav')
 healingsound = pygame.mixer.Sound('asset/sound/health-pickup-6860.mp3')
+starsound = pygame.mixer.Sound('asset/sound/pickup_star.mp3')
 
 #thiên thạch
-meteorite=pygame.image.load('asset/img/meteo34x34.png').convert_alpha()
+meteorite=pygame.image.load('asset/img/meteo34x34.png').convert_alpha() #meteo34x34.png
 meteorite=pygame.transform.scale2x(meteorite)
 meteo_list=[]
 
@@ -359,12 +386,21 @@ while key:
 
 #healing system
 hp=100
-heart_img = pygame.image.load('asset/img/heart_pixel_art_16x16.png').convert_alpha()
+heart_img = pygame.image.load('asset/img/heart_pixel_art_16x16.png').convert_alpha() #heart_pixel_art_16x16.png
 heart_img = pygame.transform.scale2x(heart_img)
 heart_list = []
 
 newheart = pygame.USEREVENT + 5
 pygame.time.set_timer(newheart, HEART_INTERVAL) # 15s
+
+
+#star system
+star_img = pygame.image.load('asset/img/star.png').convert_alpha()
+star_img = pygame.transform.scale2x(star_img)
+star_list = []
+
+newstar = pygame.USEREVENT + 6
+pygame.time.set_timer(newstar, STAR_INTERVAL) # 15s
 
 # =============================== MAIN ===============================
 
@@ -391,6 +427,8 @@ while True:
                     pipe_list.clear()
                     meteo_list.clear()
                     laser_list.clear()
+                    heart_list.clear()
+                    star_list.clear()
                     bird_rect.center = (100,350)
                     bird_movement=0
                     score=0
@@ -422,8 +460,11 @@ while True:
 
         if event.type == newheart:
             heart_list.append(create_heart())
-            pygame.time.set_timer(newheart, random.randint(HEART_INTERVAL, HEART_INTERVAL+5000))
+            pygame.time.set_timer(newheart, random.randint(HEART_INTERVAL-1000, HEART_INTERVAL+1000))
 
+        if event.type == newstar:
+            star_list.append(create_star())
+            pygame.time.set_timer(newstar, random.randint(STAR_INTERVAL-1000, STAR_INTERVAL+1000))
 
     # luôn vẽ background
     screen.blit(bg,(0,0))
@@ -452,10 +493,15 @@ while True:
         laser_list=move_laser(laser_list)
         draw_laser(laser_list)
 
-        #healing item
+        #heart item
         heart_list = move_heart(heart_list)
         draw_heart(heart_list)
         hp = check_heart_collision(heart_list, hp)
+
+        #star item
+        star_list = move_star(star_list)
+        draw_star(star_list)
+        score = check_star_collision(star_list, score)
 
         # speed up noti
         if speed_up_active:              
@@ -483,8 +529,8 @@ while True:
             floor_x_pos = 0
 
         # cơ chế tăng tốc
-        if index_speed<= end_index_speed:
-            if speed_point[index_speed]==int(score):
+        if index_speed <= end_index_speed:
+            if speed_point[index_speed] <= int(score):
                 swooshingsound.play()
                 index_speed+=1
                 if score < 100:
@@ -511,6 +557,3 @@ while True:
 
     pygame.display.update()
     clock.tick(game_speed)
-
-    
-
