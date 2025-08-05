@@ -1,12 +1,16 @@
+from this import d
+from numpy import append
 import pygame, sys, random
 
-# Interval gốc của các timer
+# Ngắt đoạn sự kiện create
 PIPE_INTERVAL = 1500        # 1.5s sinh ống
 METEO_INTERVAL = 1000       # 1s sinh thiên thạch
 LASER_INTERVAL = 4000       # 4s sinh laser
-HEART_INTERVAL = 15000      # 15s sinh tim (có thể random lại khi dùng)
+HEART_INTERVAL = 15000      # 15s sinh tim 
 
-#lặp sàn
+# =============================== DEF ===============================
+
+#vẽ sàn
 def draw_floor():
     screen.blit(floor,(floor_x_pos,650))
     screen.blit(floor,(floor_x_pos+432,650))
@@ -36,10 +40,7 @@ def draw_pipe(pipes):
             flip_pipe = pygame.transform.flip(pipe_surface,False,True)
             screen.blit(flip_pipe,pipe)   
 
-#xử lí va chạm + âm thanh
-last_hit_sound_time = 0
-hit_sound_delay = 500  # ms
-
+#va chạm chướng ngại vật
 def check_collision(pipes, lasers, hp):
     global last_hit_sound_time
     current_time = pygame.time.get_ticks()
@@ -76,7 +77,7 @@ def bird_animation():
     new_bird=bird_list[index]
     new_bird_rect=new_bird.get_rect(center=(100,bird_rect.centery))
     return new_bird, new_bird_rect
-
+#thanh máu
 def draw_hp_bar(hp, max_hp=100):
     # Vị trí và kích thước thanh máu
     bar_x = 60
@@ -104,12 +105,11 @@ def draw_hp_bar(hp, max_hp=100):
     hp_rect = hp_text.get_rect(midleft=(bar_x+bar_width+10, bar_y+bar_height//2))
     screen.blit(hp_text, hp_rect)
 
-#display
+#hiển thị điểm và máu
 def score_display(active): 
 
     # HP hiển thị góc trái trên
     draw_hp_bar(hp);
-
 
     score_surface=game_font.render('SCORE: '+str(int(score)),True,(0,204,0))
     score_rect=score_surface.get_rect(center=(215,100))
@@ -128,13 +128,14 @@ def score_display(active):
             new_rect=new_surface.get_rect(center=(325,140))
             screen.blit(new_surface,new_rect)
     return best
-#tính điểm
+#cộng điểm khi qua ống
 def cal(scores):
     for pipe in pipe_list:
         if pipe.bottom<=700:
             if pipe.centerx==bird_rect.centerx:
                 scores+=1
     return scores
+
 #tạo meteo
 def create_meteo():
     x=random.randint(100,500)
@@ -156,6 +157,7 @@ def move_meteo(meteos):
 def draw_meteo(meteos):
     for meteoa in meteos: 
             screen.blit(meteorite,meteoa) 
+
 #tạo laser
 def create_laser():
     x=random.randint(2000,2500)
@@ -169,8 +171,7 @@ def move_laser(lasers):
             lasers.pop(0)
     for lasera in lasers:
        lasera.centerx-=6
-    return lasers
-    
+    return lasers   
 #vẽ laser
 def draw_laser(lasers):
     global laser_animation_index
@@ -194,12 +195,37 @@ def draw_laser(lasers):
     if laser_animation_frames is not None:
         laser_animation_index += 1
 
-    
+#tạo tim
+def create_heart():
+    x = random.randint(500, 600)
+    y = random.randint(100, 400)
+    return heart_img.get_rect(center=(x, y))
+#dịch tim
+def move_heart(hearts):
+    for heart in hearts:
+        heart.centerx -= 3
+    # Xóa item đã bay khỏi màn hình
+    hearts = [h for h in hearts if h.centerx > -50]
+    return hearts
+#vẽ tim
+def draw_heart(hearts):
+    for heart in hearts:
+        screen.blit(heart_img, heart)
+#check ăn tim
+def check_heart_collision(hearts, hp, max_hp=100):
+    for heart in hearts[:]:  # copy để xóa khi ăn
+        if bird_rect.colliderect(heart):
+            hp = min(max_hp, hp + random.randint(10,15))  # hồi random 10-15 HP, không quá max
+            healingsound.play()
+            hearts.remove(heart)
+    return hp
+   
 
+# =============================== INIT ===============================
 pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=512)
 pygame.init()
 pygame.font.init()
-#setting
+
 WIDTH = 432
 HEIGHT = 768
 screen= pygame.display.set_mode((WIDTH,HEIGHT))
@@ -207,11 +233,18 @@ clock = pygame.time.Clock()
 gravity = 0.2
 bird_movement = 0
 
+#đang chơi
 game_active =True
+
+#xử lí va chạm + âm thanh
+last_hit_sound_time = 0
+hit_sound_delay = 500
+
+#font
 game_font=pygame.font.Font('asset/font/04B_19.TTF',43)
 small_font = pygame.font.Font('asset/font/04B_19.TTF', 20)
-
 new_font=pygame.font.SysFont('',25)
+
 #chèn background
 bg = pygame.image.load('asset/img/background-night.png').convert()
 bg = pygame.transform.scale2x(bg)
@@ -245,9 +278,15 @@ pygame.time.set_timer(newpipe,PIPE_INTERVAL)
 game_over_surface=pygame.transform.scale2x(pygame.image.load('asset/img/message.png').convert_alpha())
 game_over_rect=game_over_surface.get_rect(center = (100,350))
 
+#vị trí ống bên dưới
 pipe_height=[]
 for i in range(300,450):
     pipe_height.append(i)
+
+#khoảng cách ống trên dưới
+dis_pipes=[]
+for i in range(680,700):
+    dis_pipes.append(i)
 
 #sound
 flapsound=pygame.mixer.Sound('asset/sound/sfx_wing.wav')
@@ -267,18 +306,19 @@ newmeteo= pygame.USEREVENT+3
 pygame.time.set_timer(newmeteo,METEO_INTERVAL)
 
 #LASER
-WARNING_DISTANCE = 50  # Khoảng cách từ mép phải màn hình để hiện "!"
-warning_font = pygame.font.SysFont(None, 50)  # font mặc định, cỡ 50
-warning_color = (255, 0, 0)  # đỏ chói
+WARNING_DISTANCE = 50  # Khoảng cách cảnh báo
+warning_font = pygame.font.SysFont(None, 50)
+warning_color = (255, 0, 0)  # đỏ
 
 laser = pygame.image.load('asset/img/laser.png').convert_alpha()
 laser_animation_frames = None
 laser_animation_index = 0
-
 laser_list=[]
+
 #timer
 lasertime= pygame.USEREVENT+4
-pygame.time.set_timer(lasertime,LASER_INTERVAL) # 4s /laser
+pygame.time.set_timer(lasertime,LASER_INTERVAL) # 4s / laser
+
 #điểm
 score =0
 best = 0
@@ -286,20 +326,18 @@ best = 0
 #kỉ lục mới
 new_high_score=False
 
-#tăng tốc bay
+#tăng tốc game
 game_speed = 80
 speed_point = [5,10,15,20,25,30,50,100,200,300,400,500,600,700,800,900,1000]
 index_speed = 0
 end_index_speed = len(speed_point)-1
 
+#thông báo nếu tăng tốc
 speed_up_text = None
 speed_up_rect = None
 speed_up_active = False
 speed_up_speed = 4  # tốc độ chạy ngang
 
-
-#khoảng cách ống
-dis_pipes=[690,710,730]
 
 #Màn hình chờ
 key = True
@@ -311,6 +349,10 @@ while key:
             if event.type == pygame.KEYDOWN:
                 if event.key== pygame.K_SPACE:
                     key=False 
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
     screen.blit(bg,(0,0))
     screen.blit(game_over_surface,(70,200))
     pygame.display.update()
@@ -321,34 +363,14 @@ heart_img = pygame.image.load('asset/img/heart_pixel_art_16x16.png').convert_alp
 heart_img = pygame.transform.scale2x(heart_img)
 heart_list = []
 
-def create_heart():
-    x = random.randint(500, 600)
-    y = random.randint(100, 400)
-    return heart_img.get_rect(center=(x, y))
-
-def move_heart(hearts):
-    for heart in hearts:
-        heart.centerx -= 3
-    # Xóa item đã bay khỏi màn hình
-    hearts = [h for h in hearts if h.centerx > -50]
-    return hearts
-
-def draw_heart(hearts):
-    for heart in hearts:
-        screen.blit(heart_img, heart)
-
-def check_heart_collision(hearts, hp, max_hp=100):
-    for heart in hearts[:]:  # copy để xóa khi ăn
-        if bird_rect.colliderect(heart):
-            hp = min(max_hp, hp + random.randint(10,15))  # hồi random 10-15 HP, không quá max
-            healingsound.play()
-            hearts.remove(heart)
-    return hp
 newheart = pygame.USEREVENT + 5
 pygame.time.set_timer(newheart, HEART_INTERVAL) # 15s
 
+# =============================== MAIN ===============================
+
 #main
 while True:
+    # nhặt event
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -403,31 +425,30 @@ while True:
             pygame.time.set_timer(newheart, random.randint(HEART_INTERVAL, HEART_INTERVAL+5000))
 
 
-
-
-
+    # luôn vẽ background
     screen.blit(bg,(0,0))
+
+
+    # tác động lên vật thể
     if game_active:
-        #meteo
+        # meteo
         meteo_list=move_meteo(meteo_list)
         draw_meteo(meteo_list) 
 
-        #chim
+        # bird
         bird_movement += gravity
         bird_rect.centery += bird_movement
         new_bird= rotate_bird(bird)
         screen.blit(new_bird,bird_rect)
 
-        #hp
+        # hp
         hp=check_collision(pipe_list,laser_list,hp)
 
-        #ống
+        # ống
         pipe_list=move_pipe(pipe_list)
         draw_pipe(pipe_list)
 
-        #game_active=True // no die
-
-        #laser
+        # laser
         laser_list=move_laser(laser_list)
         draw_laser(laser_list)
 
@@ -436,6 +457,7 @@ while True:
         draw_heart(heart_list)
         hp = check_heart_collision(heart_list, hp)
 
+        # speed up noti
         if speed_up_active:              
             speed_up_rect.centerx += speed_up_speed
             screen.blit(speed_up_text, speed_up_rect)
@@ -445,7 +467,7 @@ while True:
                 speed_up_active = False
 
 
-        #score
+        # score
         x=cal(score)
         if x>score:
             pointsound.play()
@@ -454,31 +476,41 @@ while True:
             new_high_score=True
         best=max(best,score)
         game_active= (hp>0)
+
+        # sàn
+        floor_x_pos -= 1
+        if floor_x_pos <= -432:
+            floor_x_pos = 0
+
+        # cơ chế tăng tốc
+        if index_speed<= end_index_speed:
+            if speed_point[index_speed]==int(score):
+                swooshingsound.play()
+                index_speed+=1
+                if score < 100:
+                    game_speed+=5
+                else:
+                    game_speed+=3
+
+                # Tạo Speed Up text chạy ngang
+                su_noti = "SPEED UP "
+                for i in range(1,index_speed):
+                    su_noti += "!!"
+                speed_up_text = small_font.render(su_noti, True, (255, 255, 0))
+                speed_up_rect = speed_up_text.get_rect(center=(-100, random.randint(50,200)))  # Bắt đầu ngoài màn hình bên trái
+                speed_up_active = True
+
+        #game_active=True # open to no die
         score_display(game_active)
 
+    # luôn hiện điểm
     score_display(game_active)
 
-    # Vẽ sàn
-    floor_x_pos -= 1
+    # luôn vẽ sàn
     draw_floor()
-    if floor_x_pos <= -432:
-        floor_x_pos = 0
 
-        
     pygame.display.update()
     clock.tick(game_speed)
-    if index_speed<= end_index_speed:
-        if speed_point[index_speed]==int(score):
-            swooshingsound.play()
-            index_speed+=1
-            if score < 100:
-                game_speed+=5
-            else:
-                game_speed+=3
 
-             # Tạo Speed Up text chạy ngang
-            speed_up_text = small_font.render("SPEED UP!", True, (255, 255, 0))
-            speed_up_rect = speed_up_text.get_rect(center=(-100, random.randint(50,200)))  # Bắt đầu ngoài màn hình bên trái
-            speed_up_active = True
     
 
