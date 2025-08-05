@@ -30,4 +30,4 @@ Mục tiêu:
 2. Nếu dùng Python:  
    ```bash
    pip install pygame
-   python main.py
+   python flappybird.py
